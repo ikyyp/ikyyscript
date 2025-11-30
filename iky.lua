@@ -1,8 +1,9 @@
--- Fisch Panel UI - ikyy beta
--- Complete with Speed, Jump, and All Features
+-- Fisch Panel UI - ikyy beta (Complete & Organized)
+-- With delay settings, +/- buttons, organized sections
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
@@ -11,25 +12,28 @@ local Config = {
     InstantFish = false,
     NoAnimation = false,
     AutoFish = false,
+    FishDelay = 0.1,
     WalkSpeed = 16,
     JumpPower = 50
 }
+
+local isMinimized = false
 
 -- Buat ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "FischPanelIkyy"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
 -- Main Panel
 local Panel = Instance.new("Frame")
 Panel.Name = "MainPanel"
-Panel.Size = UDim2.new(0, 380, 0, 600)
-Panel.Position = UDim2.new(0.5, -190, 0.5, -300)
+Panel.Size = UDim2.new(0, 400, 0, 700)
+Panel.Position = UDim2.new(0.5, -200, 0.5, -350)
 Panel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Panel.BorderSizePixel = 0
 Panel.Active = true
-Panel.Draggable = true
 Panel.Parent = ScreenGui
 
 local PanelCorner = Instance.new("UICorner")
@@ -46,15 +50,49 @@ local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 55)
 Header.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 Header.BorderSizePixel = 0
+Header.Active = true
 Header.Parent = Panel
 
 local HeaderCorner = Instance.new("UICorner")
 HeaderCorner.CornerRadius = UDim.new(0, 12)
 HeaderCorner.Parent = Header
 
+-- Make header draggable
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    Panel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Panel.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
 -- Title
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -60, 1, 0)
+Title.Size = UDim2.new(1, -100, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
 Title.Text = "🎣 FISCH PANEL - IKYY"
@@ -63,6 +101,21 @@ Title.TextSize = 18
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Header
+
+-- Minimize Button
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 38, 0, 38)
+MinimizeBtn.Position = UDim2.new(1, -90, 0, 8.5)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 60)
+MinimizeBtn.Text = "─"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 20
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = Header
+
+local MinBtnCorner = Instance.new("UICorner")
+MinBtnCorner.CornerRadius = UDim.new(0, 8)
+MinBtnCorner.Parent = MinimizeBtn
 
 -- Close Button
 local CloseBtn = Instance.new("TextButton")
@@ -83,21 +136,81 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- ScrollingFrame untuk konten
+-- Content Container
+local Content = Instance.new("Frame")
+Content.Name = "Content"
+Content.Size = UDim2.new(1, 0, 1, -55)
+Content.Position = UDim2.new(0, 0, 0, 55)
+Content.BackgroundTransparency = 1
+Content.Parent = Panel
+
+-- ScrollingFrame
 local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, -20, 1, -75)
-ScrollFrame.Position = UDim2.new(0, 10, 0, 65)
+ScrollFrame.Size = UDim2.new(1, -20, 1, -20)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 10)
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.ScrollBarThickness = 6
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 200, 255)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 880)
-ScrollFrame.Parent = Panel
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1100)
+ScrollFrame.Parent = Content
 
--- Server Info Section
+-- Minimize functionality
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        Panel:TweenSize(UDim2.new(0, 400, 0, 55), "Out", "Quad", 0.3, true)
+        MinimizeBtn.Text = "+"
+        Content.Visible = false
+    else
+        Panel:TweenSize(UDim2.new(0, 400, 0, 700), "Out", "Quad", 0.3, true)
+        MinimizeBtn.Text = "─"
+        Content.Visible = true
+    end
+end)
+
+local currentY = 0
+
+-- Function untuk section header
+local function CreateSection(title)
+    local Section = Instance.new("Frame")
+    Section.Size = UDim2.new(1, 0, 0, 40)
+    Section.Position = UDim2.new(0, 0, 0, currentY)
+    Section.BackgroundTransparency = 1
+    Section.Parent = ScrollFrame
+    
+    local SectionTitle = Instance.new("TextLabel")
+    SectionTitle.Size = UDim2.new(1, -10, 1, 0)
+    SectionTitle.Position = UDim2.new(0, 5, 0, 0)
+    SectionTitle.BackgroundTransparency = 1
+    SectionTitle.Text = title
+    SectionTitle.TextColor3 = Color3.fromRGB(100, 200, 255)
+    SectionTitle.TextSize = 16
+    SectionTitle.Font = Enum.Font.GothamBold
+    SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    SectionTitle.TextYAlignment = Enum.TextYAlignment.Bottom
+    SectionTitle.Parent = Section
+    
+    local Line = Instance.new("Frame")
+    Line.Size = UDim2.new(1, 0, 0, 2)
+    Line.Position = UDim2.new(0, 0, 1, -2)
+    Line.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+    Line.BorderSizePixel = 0
+    Line.Parent = Section
+    
+    local LineCorner = Instance.new("UICorner")
+    LineCorner.CornerRadius = UDim.new(1, 0)
+    LineCorner.Parent = Line
+    
+    currentY = currentY + 50
+end
+
+-- SERVER INFO SECTION
+CreateSection("📊 SERVER INFORMATION")
+
 local ServerInfo = Instance.new("Frame")
 ServerInfo.Size = UDim2.new(1, 0, 0, 130)
-ServerInfo.Position = UDim2.new(0, 0, 0, 0)
+ServerInfo.Position = UDim2.new(0, 0, 0, currentY)
 ServerInfo.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 ServerInfo.BorderSizePixel = 0
 ServerInfo.Parent = ScrollFrame
@@ -111,52 +224,56 @@ ServerInfoStroke.Color = Color3.fromRGB(50, 50, 60)
 ServerInfoStroke.Thickness = 1
 ServerInfoStroke.Parent = ServerInfo
 
-local InfoTitle = Instance.new("TextLabel")
-InfoTitle.Size = UDim2.new(1, -20, 0, 30)
-InfoTitle.Position = UDim2.new(0, 10, 0, 5)
-InfoTitle.BackgroundTransparency = 1
-InfoTitle.Text = "📊 SERVER INFO"
-InfoTitle.TextColor3 = Color3.fromRGB(100, 200, 255)
-InfoTitle.TextSize = 15
-InfoTitle.Font = Enum.Font.GothamBold
-InfoTitle.TextXAlignment = Enum.TextXAlignment.Left
-InfoTitle.Parent = ServerInfo
-
 local PlayerCount = Instance.new("TextLabel")
-PlayerCount.Size = UDim2.new(1, -20, 0, 25)
-PlayerCount.Position = UDim2.new(0, 10, 0, 40)
+PlayerCount.Size = UDim2.new(1, -20, 0, 30)
+PlayerCount.Position = UDim2.new(0, 10, 0, 10)
 PlayerCount.BackgroundTransparency = 1
 PlayerCount.Text = "👥 Players: 0/0"
 PlayerCount.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlayerCount.TextSize = 13
-PlayerCount.Font = Enum.Font.Gotham
+PlayerCount.TextSize = 14
+PlayerCount.Font = Enum.Font.GothamSemibold
 PlayerCount.TextXAlignment = Enum.TextXAlignment.Left
 PlayerCount.Parent = ServerInfo
 
 local ServerID = Instance.new("TextLabel")
-ServerID.Size = UDim2.new(1, -20, 0, 25)
-ServerID.Position = UDim2.new(0, 10, 0, 68)
+ServerID.Size = UDim2.new(1, -20, 0, 30)
+ServerID.Position = UDim2.new(0, 10, 0, 45)
 ServerID.BackgroundTransparency = 1
 ServerID.Text = "🔗 Job ID: Loading..."
 ServerID.TextColor3 = Color3.fromRGB(200, 200, 200)
-ServerID.TextSize = 11
+ServerID.TextSize = 12
 ServerID.Font = Enum.Font.Gotham
 ServerID.TextXAlignment = Enum.TextXAlignment.Left
 ServerID.Parent = ServerInfo
 
+local ServerRegion = Instance.new("TextLabel")
+ServerRegion.Size = UDim2.new(1, -20, 0, 30)
+ServerRegion.Position = UDim2.new(0, 10, 0, 75)
+ServerRegion.BackgroundTransparency = 1
+ServerRegion.Text = "🌍 Region: Unknown"
+ServerRegion.TextColor3 = Color3.fromRGB(200, 200, 200)
+ServerRegion.TextSize = 12
+ServerRegion.Font = Enum.Font.Gotham
+ServerRegion.TextXAlignment = Enum.TextXAlignment.Left
+ServerRegion.Parent = ServerInfo
+
 local Ping = Instance.new("TextLabel")
-Ping.Size = UDim2.new(1, -20, 0, 25)
-Ping.Position = UDim2.new(0, 10, 0, 96)
+Ping.Size = UDim2.new(1, -20, 0, 30)
+Ping.Position = UDim2.new(0, 10, 0, 105)
 Ping.BackgroundTransparency = 1
 Ping.Text = "📶 Ping: 0ms"
 Ping.TextColor3 = Color3.fromRGB(150, 255, 150)
 Ping.TextSize = 13
-Ping.Font = Enum.Font.Gotham
+Ping.Font = Enum.Font.GothamSemibold
 Ping.TextXAlignment = Enum.TextXAlignment.Left
 Ping.Parent = ServerInfo
 
--- Function untuk membuat toggle
-local currentY = 140
+currentY = currentY + 140
+
+-- FISHING SECTION
+CreateSection("🎣 FISHING FEATURES")
+
+-- Function untuk toggle
 local function CreateToggle(name, description, configKey)
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Size = UDim2.new(1, 0, 0, 75)
@@ -225,26 +342,26 @@ local function CreateToggle(name, description, configKey)
     currentY = currentY + 85
 end
 
--- Function untuk membuat slider
-local function CreateSlider(name, description, min, max, default, configKey)
-    local SliderFrame = Instance.new("Frame")
-    SliderFrame.Size = UDim2.new(1, 0, 0, 90)
-    SliderFrame.Position = UDim2.new(0, 0, 0, currentY)
-    SliderFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    SliderFrame.BorderSizePixel = 0
-    SliderFrame.Parent = ScrollFrame
+-- Function untuk slider dengan +/- buttons
+local function CreateAdjuster(name, description, min, max, default, step, configKey)
+    local AdjusterFrame = Instance.new("Frame")
+    AdjusterFrame.Size = UDim2.new(1, 0, 0, 90)
+    AdjusterFrame.Position = UDim2.new(0, 0, 0, currentY)
+    AdjusterFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    AdjusterFrame.BorderSizePixel = 0
+    AdjusterFrame.Parent = ScrollFrame
     
     local FrameCorner = Instance.new("UICorner")
     FrameCorner.CornerRadius = UDim.new(0, 10)
-    FrameCorner.Parent = SliderFrame
+    FrameCorner.Parent = AdjusterFrame
     
     local FrameStroke = Instance.new("UIStroke")
     FrameStroke.Color = Color3.fromRGB(50, 50, 60)
     FrameStroke.Thickness = 1
-    FrameStroke.Parent = SliderFrame
+    FrameStroke.Parent = AdjusterFrame
     
     local NameLabel = Instance.new("TextLabel")
-    NameLabel.Size = UDim2.new(1, -80, 0, 25)
+    NameLabel.Size = UDim2.new(1, -20, 0, 25)
     NameLabel.Position = UDim2.new(0, 12, 0, 8)
     NameLabel.BackgroundTransparency = 1
     NameLabel.Text = name
@@ -252,17 +369,7 @@ local function CreateSlider(name, description, min, max, default, configKey)
     NameLabel.TextSize = 14
     NameLabel.Font = Enum.Font.GothamBold
     NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    NameLabel.Parent = SliderFrame
-    
-    local ValueLabel = Instance.new("TextLabel")
-    ValueLabel.Size = UDim2.new(0, 60, 0, 25)
-    ValueLabel.Position = UDim2.new(1, -72, 0, 8)
-    ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Text = tostring(default)
-    ValueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-    ValueLabel.TextSize = 13
-    ValueLabel.Font = Enum.Font.GothamBold
-    ValueLabel.Parent = SliderFrame
+    NameLabel.Parent = AdjusterFrame
     
     local DescLabel = Instance.new("TextLabel")
     DescLabel.Size = UDim2.new(1, -20, 0, 20)
@@ -273,67 +380,80 @@ local function CreateSlider(name, description, min, max, default, configKey)
     DescLabel.TextSize = 11
     DescLabel.Font = Enum.Font.Gotham
     DescLabel.TextXAlignment = Enum.TextXAlignment.Left
-    DescLabel.Parent = SliderFrame
+    DescLabel.Parent = AdjusterFrame
     
-    local SliderBack = Instance.new("Frame")
-    SliderBack.Size = UDim2.new(1, -24, 0, 8)
-    SliderBack.Position = UDim2.new(0, 12, 0, 62)
-    SliderBack.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    SliderBack.BorderSizePixel = 0
-    SliderBack.Parent = SliderFrame
+    -- Value display
+    local ValueLabel = Instance.new("TextLabel")
+    ValueLabel.Size = UDim2.new(0, 80, 0, 32)
+    ValueLabel.Position = UDim2.new(0.5, -40, 0, 55)
+    ValueLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    ValueLabel.Text = tostring(default)
+    ValueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    ValueLabel.TextSize = 16
+    ValueLabel.Font = Enum.Font.GothamBold
+    ValueLabel.Parent = AdjusterFrame
     
-    local SliderBackCorner = Instance.new("UICorner")
-    SliderBackCorner.CornerRadius = UDim.new(1, 0)
-    SliderBackCorner.Parent = SliderBack
+    local ValueCorner = Instance.new("UICorner")
+    ValueCorner.CornerRadius = UDim.new(0, 8)
+    ValueCorner.Parent = ValueLabel
     
-    local SliderFill = Instance.new("Frame")
-    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    SliderFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-    SliderFill.BorderSizePixel = 0
-    SliderFill.Parent = SliderBack
+    -- Minus button
+    local MinusBtn = Instance.new("TextButton")
+    MinusBtn.Size = UDim2.new(0, 35, 0, 32)
+    MinusBtn.Position = UDim2.new(0, 12, 0, 55)
+    MinusBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+    MinusBtn.Text = "<"
+    MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinusBtn.TextSize = 18
+    MinusBtn.Font = Enum.Font.GothamBold
+    MinusBtn.Parent = AdjusterFrame
     
-    local SliderFillCorner = Instance.new("UICorner")
-    SliderFillCorner.CornerRadius = UDim.new(1, 0)
-    SliderFillCorner.Parent = SliderFill
+    local MinusCorner = Instance.new("UICorner")
+    MinusCorner.CornerRadius = UDim.new(0, 8)
+    MinusCorner.Parent = MinusBtn
     
-    local SliderButton = Instance.new("TextButton")
-    SliderButton.Size = UDim2.new(1, 0, 1, 0)
-    SliderButton.BackgroundTransparency = 1
-    SliderButton.Text = ""
-    SliderButton.Parent = SliderBack
+    -- Plus button
+    local PlusBtn = Instance.new("TextButton")
+    PlusBtn.Size = UDim2.new(0, 35, 0, 32)
+    PlusBtn.Position = UDim2.new(1, -47, 0, 55)
+    PlusBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+    PlusBtn.Text = ">"
+    PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PlusBtn.TextSize = 18
+    PlusBtn.Font = Enum.Font.GothamBold
+    PlusBtn.Parent = AdjusterFrame
     
-    local dragging = false
-    SliderButton.MouseButton1Down:Connect(function()
-        dragging = true
+    local PlusCorner = Instance.new("UICorner")
+    PlusCorner.CornerRadius = UDim.new(0, 8)
+    PlusCorner.Parent = PlusBtn
+    
+    MinusBtn.MouseButton1Click:Connect(function()
+        local current = Config[configKey]
+        local newValue = math.max(min, current - step)
+        Config[configKey] = newValue
+        ValueLabel.Text = tostring(newValue)
     end)
     
-    game:GetService("UserInputService").InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local pos = math.clamp((input.Position.X - SliderBack.AbsolutePosition.X) / SliderBack.AbsoluteSize.X, 0, 1)
-            SliderFill.Size = UDim2.new(pos, 0, 1, 0)
-            local value = math.floor(min + (max - min) * pos)
-            ValueLabel.Text = tostring(value)
-            Config[configKey] = value
-        end
+    PlusBtn.MouseButton1Click:Connect(function()
+        local current = Config[configKey]
+        local newValue = math.min(max, current + step)
+        Config[configKey] = newValue
+        ValueLabel.Text = tostring(newValue)
     end)
     
     currentY = currentY + 100
 end
 
--- Create Toggles
 CreateToggle("⚡ Instant Fish", "Langsung dapat ikan tanpa delay casting", "InstantFish")
 CreateToggle("🚫 No Animation", "Matikan semua animasi fishing untuk performa", "NoAnimation")
 CreateToggle("🔄 Auto Fish", "Otomatis fishing loop terus menerus", "AutoFish")
+CreateAdjuster("⏱️ Fish Delay", "Delay antara setiap cast (detik)", 0.1, 5, 0.1, 0.1, "FishDelay")
 
--- Create Sliders
-CreateSlider("🏃 Walk Speed", "Atur kecepatan berjalan karakter", 16, 200, 16, "WalkSpeed")
-CreateSlider("🦘 Jump Power", "Atur tinggi lompatan karakter", 50, 200, 50, "JumpPower")
+-- CHARACTER SECTION
+CreateSection("🏃 CHARACTER SETTINGS")
+
+CreateAdjuster("🏃 Walk Speed", "Kecepatan berjalan karakter", 16, 200, 16, 4, "WalkSpeed")
+CreateAdjuster("🦘 Jump Power", "Tinggi lompatan karakter", 50, 200, 50, 5, "JumpPower")
 
 -- Note Section
 local NoteFrame = Instance.new("Frame")
@@ -377,23 +497,26 @@ NoteText.Parent = NoteFrame
 
 -- Update Server Info
 spawn(function()
-    while wait(1) do
+    while task.wait(1) do
         pcall(function()
-            local currentPlayers = #Players:GetPlayers()
-            local maxPlayers = Players.MaxPlayers
-            PlayerCount.Text = "👥 Players: " .. currentPlayers .. "/" .. maxPlayers
+            PlayerCount.Text = "👥 Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
             
             local jobId = game.JobId
             if jobId and jobId ~= "" then
-                ServerID.Text = "🔗 Job ID: " .. jobId:sub(1, 25) .. "..."
+                ServerID.Text = "🔗 Job ID: " .. jobId:sub(1, 20) .. "..."
             end
             
-            local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-            Ping.Text = "📶 Ping: " .. ping .. "ms"
+            local region = game:GetService("LocalizationService").RobloxLocaleId
+            ServerRegion.Text = "🌍 Region: " .. region:upper()
             
-            if ping < 100 then
+            local stats = game:GetService("Stats")
+            local ping = stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+            local pingNum = tonumber(ping:match("%d+")) or 0
+            Ping.Text = "📶 Ping: " .. math.floor(pingNum) .. "ms"
+            
+            if pingNum < 100 then
                 Ping.TextColor3 = Color3.fromRGB(150, 255, 150)
-            elseif ping < 200 then
+            elseif pingNum < 200 then
                 Ping.TextColor3 = Color3.fromRGB(255, 255, 150)
             else
                 Ping.TextColor3 = Color3.fromRGB(255, 150, 150)
@@ -402,137 +525,75 @@ spawn(function()
     end
 end)
 
--- Get Rod Function
-local function getRod()
-    local char = Player.Character
-    if not char then return nil end
-    
-    for _, tool in pairs(char:GetChildren()) do
-        if tool:IsA("Tool") and (tool.Name:lower():find("rod") or tool.Name:lower():find("fishing")) then
-            return tool
-        end
-    end
-    
-    for _, tool in pairs(Player.Backpack:GetChildren()) do
-        if tool:IsA("Tool") and (tool.Name:lower():find("rod") or tool.Name:lower():find("fishing")) then
-            return tool
-        end
-    end
-    
-    return nil
-end
-
 -- Apply Speed and Jump
-spawn(function()
-    while wait(0.1) do
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local char = Player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = Config.WalkSpeed
+                humanoid.JumpPower = Config.JumpPower
+            end
+        end
+    end)
+end)
+
+-- No Animation
+RunService.Heartbeat:Connect(function()
+    if Config.NoAnimation then
         pcall(function()
             local char = Player.Character
             if char then
-                local humanoid = char:FindFirstChild("Humanoid")
-                if humanoid then
-                    humanoid.WalkSpeed = Config.WalkSpeed
-                    humanoid.JumpPower = Config.JumpPower
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid:FindFirstChild("Animator") then
+                    for _, track in pairs(humanoid.Animator:GetPlayingAnimationTracks()) do
+                        track:Stop()
+                    end
                 end
             end
         end)
     end
 end)
 
--- No Animation Function
-spawn(function()
-    while wait(0.1) do
-        if Config.NoAnimation then
-            pcall(function()
-                local char = Player.Character
-                if char then
-                    local humanoid = char:FindFirstChild("Humanoid")
-                    if humanoid then
-                        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                            if track.Name:lower():find("fish") or 
-                               track.Name:lower():find("cast") or 
-                               track.Name:lower():find("reel") then
-                                track:Stop()
-                            end
-                        end
-                    end
-                end
-            end)
+-- Fishing Functions
+local function getRod()
+    if Player.Character then
+        for _, v in pairs(Player.Character:GetChildren()) do
+            if v:IsA("Tool") and v:FindFirstChild("events") then
+                return v
+            end
         end
     end
-end)
-
--- Instant Fish Function
-local function DoInstantFish()
-    pcall(function()
-        local rod = getRod()
-        if not rod then return end
-        
-        -- Equip rod
-        if rod.Parent == Player.Backpack then
-            Player.Character.Humanoid:EquipTool(rod)
-            wait(0.05)
+    for _, v in pairs(Player.Backpack:GetChildren()) do
+        if v:IsA("Tool") and v:FindFirstChild("events") then
+            return v
         end
-        
-        local events = rod:FindFirstChild("events")
-        if not events then return end
-        
-        -- Cast
-        local cast = events:FindFirstChild("cast")
-        if cast then
-            cast:FireServer(100, 1)
-        end
-        
-        wait(0.15)
-        
-        -- Auto Reel
-        local reel = PlayerGui:FindFirstChild("reel")
-        if reel and reel.Enabled then
-            local reelfinished = events:FindFirstChild("reelfinished")
-            if reelfinished then
-                reelfinished:FireServer(100, true)
-            end
-        end
-        
-        -- Auto Shake
-        local shakeui = PlayerGui:FindFirstChild("shakeui")
-        if shakeui and shakeui.Enabled then
-            local shake = events:FindFirstChild("shake")
-            if shake then
-                for i = 1, 25 do
-                    shake:FireServer()
-                    wait(0.02)
-                end
-            end
-        end
-    end)
+    end
+    return nil
 end
 
--- Manual Instant Fish
-spawn(function()
-    while wait(0.1) do
-        if Config.InstantFish and not Config.AutoFish then
-            DoInstantFish()
-        end
+local function equipRod(rod)
+    if rod and rod.Parent == Player.Backpack then
+        Player.Character.Humanoid:EquipTool(rod)
+        task.wait(0.3)
+        return true
     end
-end)
+    return rod and rod.Parent == Player.Character
+end
 
--- Auto Fish Loop
-spawn(function()
-    while wait(0.6) do
-        if Config.AutoFish then
-            DoInstantFish()
-        end
-    end
-end)
+local isFishing = false
 
--- Notification
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "🎣 Fisch Panel - ikyy",
-    Text = "Script berhasil dimuat! Selamat fishing!",
-    Duration = 5
-})
-
-print("=================================")
-print("Fisch Panel by ikyy - Loaded!")
-print("Terimakasih udah pakai script ini")
-print("=================================")
+local function InstantFish()
+    if isFishing then return end
+    isFishing = true
+    
+    task.spawn(function()
+        pcall(function()
+            local rod = getRod()
+            if not rod then 
+                isFishing = false
+                return 
+            end
+            
+         
