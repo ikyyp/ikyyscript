@@ -424,7 +424,273 @@ local function CreateAdjuster(name, description, min, max, default, step, config
     PlusBtn.Parent = AdjusterFrame
     
     local PlusCorner = Instance.new("UICorner")
-    PlusCorner.CornerRadius = UDim.new(0, 8)
+    PlusCorner.CornerRadius = UDim.new(0, 10)
+    PlusCorner.Parent = PlusBtn
+    
+    -- Button hover effects
+    MinusBtn.MouseEnter:Connect(function()
+        TweenService:Create(MinusBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 130, 130)}):Play()
+    end)
+    MinusBtn.MouseLeave:Connect(function()
+        TweenService:Create(MinusBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 100, 100)}):Play()
+    end)
+    
+    PlusBtn.MouseEnter:Connect(function()
+        TweenService:Create(PlusBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(130, 255, 130)}):Play()
+    end)
+    PlusBtn.MouseLeave:Connect(function()
+        TweenService:Create(PlusBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(100, 255, 100)}):Play()
+    end)
+    
+    MinusBtn.MouseButton1Click:Connect(function()
+        local current = Config[configKey]
+        local newValue = math.max(min, current - step)
+        Config[configKey] = newValue
+        ValueLabel.Text = tostring(newValue) .. unit
+    end)
+    
+    PlusBtn.MouseButton1Click:Connect(function()
+        local current = Config[configKey]
+        local newValue = math.min(max, current + step)
+        Config[configKey] = newValue
+        ValueLabel.Text = tostring(newValue) .. unit
+    end)
+    
+    currentY = currentY + 110
+end
+
+-- Create Features
+CreateToggle("⚡", "Instant Fish", "Langsung dapat ikan tanpa delay", "InstantFish")
+CreateToggle("🚫", "No Animation", "Matikan animasi fishing", "NoAnimation")
+CreateToggle("🔄", "Auto Fish", "Loop otomatis terus menerus", "AutoFish")
+CreateAdjuster("⏱️", "Fish Delay", "Delay antara cast", 0.1, 5, 0.1, 0.1, "s", "FishDelay")
+
+-- CHARACTER SECTION
+CreateSection("🏃", "CHARACTER SETTINGS")
+
+CreateAdjuster("🏃", "Walk Speed", "Kecepatan berjalan", 16, 200, 16, 4, "", "WalkSpeed")
+CreateAdjuster("🦘", "Jump Power", "Tinggi lompatan", 50, 200, 50, 5, "", "JumpPower")
+
+-- Note Section
+local NoteFrame = Instance.new("Frame")
+NoteFrame.Size = UDim2.new(1, 0, 0, 70)
+NoteFrame.Position = UDim2.new(0, 0, 0, currentY)
+NoteFrame.BackgroundColor3 = Color3.fromRGB(30, 120, 200)
+NoteFrame.BorderSizePixel = 0
+NoteFrame.ZIndex = 2
+NoteFrame.Parent = ScrollFrame
+
+local NoteCorner = Instance.new("UICorner")
+NoteCorner.CornerRadius = UDim.new(0, 12)
+NoteCorner.Parent = NoteFrame
+
+local NoteGradient = Instance.new("UIGradient")
+NoteGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 150, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 100, 200))
+}
+NoteGradient.Rotation = 45
+NoteGradient.Parent = NoteFrame
+
+local NoteIcon = Instance.new("TextLabel")
+NoteIcon.Size = UDim2.new(0, 40, 0, 40)
+NoteIcon.Position = UDim2.new(0, 15, 0.5, -20)
+NoteIcon.BackgroundTransparency = 1
+NoteIcon.Text = "💙"
+NoteIcon.TextSize = 28
+NoteIcon.ZIndex = 2
+NoteIcon.Parent = NoteFrame
+
+local NoteText = Instance.new("TextLabel")
+NoteText.Size = UDim2.new(1, -70, 1, 0)
+NoteText.Position = UDim2.new(0, 60, 0, 0)
+NoteText.BackgroundTransparency = 1
+NoteText.Text = "Terimakasih udah gunain\nscript ikyy beta ❤️"
+NoteText.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoteText.TextSize = 14
+NoteText.Font = Enum.Font.GothamBold
+NoteText.TextXAlignment = Enum.TextXAlignment.Left
+NoteText.TextYAlignment = Enum.TextYAlignment.Center
+NoteText.ZIndex = 2
+NoteText.Parent = NoteFrame
+
+-- Update Server Info
+spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            PlayerCount.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
+            
+            local jobId = game.JobId
+            if jobId and jobId ~= "" then
+                ServerID.Text = "Job ID: " .. jobId:sub(1, 20) .. "..."
+            end
+            
+            local region = game:GetService("LocalizationService").RobloxLocaleId
+            ServerRegion.Text = "Region: " .. region:upper()
+            
+            local stats = game:GetService("Stats")
+            local ping = stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+            local pingNum = tonumber(ping:match("%d+")) or 0
+            Ping.Text = "Ping: " .. math.floor(pingNum) .. "ms"
+            
+            if pingNum < 100 then
+                Ping.TextColor3 = Color3.fromRGB(150, 255, 150)
+            elseif pingNum < 200 then
+                Ping.TextColor3 = Color3.fromRGB(255, 255, 150)
+            else
+                Ping.TextColor3 = Color3.fromRGB(255, 150, 150)
+            end
+        end)
+    end
+end)
+
+-- Apply Speed and Jump
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local char = Player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = Config.WalkSpeed
+                humanoid.JumpPower = Config.JumpPower
+            end
+        end
+    end)
+end)
+
+-- No Animation
+RunService.Heartbeat:Connect(function()
+    if Config.NoAnimation then
+        pcall(function()
+            local char = Player.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid:FindFirstChild("Animator") then
+                    for _, track in pairs(humanoid.Animator:GetPlayingAnimationTracks()) do
+                        track:Stop()
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Fishing Functions
+local function getRod()
+    if Player.Character then
+        for _, v in pairs(Player.Character:GetChildren()) do
+            if v:IsA("Tool") and v:FindFirstChild("events") then
+                return v
+            end
+        end
+    end
+    for _, v in pairs(Player.Backpack:GetChildren()) do
+        if v:IsA("Tool") and v:FindFirstChild("events") then
+            return v
+        end
+    end
+    return nil
+end
+
+local function equipRod(rod)
+    if rod and rod.Parent == Player.Backpack then
+        Player.Character.Humanoid:EquipTool(rod)
+        task.wait(0.3)
+        return true
+    end
+    return rod and rod.Parent == Player.Character
+end
+
+local isFishing = false
+
+local function InstantFish()
+    if isFishing then return end
+    isFishing = true
+    
+    task.spawn(function()
+        pcall(function()
+            local rod = getRod()
+            if not rod then 
+                isFishing = false
+                return 
+            end
+            
+            if not equipRod(rod) then
+                isFishing = false
+                return
+            end
+            
+            local events = rod:FindFirstChild("events")
+            if events and events:FindFirstChild("cast") then
+                events.cast:FireServer(100, 1)
+                task.wait(Config.FishDelay)
+            end
+            
+            local maxWait = 0
+            while maxWait < 100 do
+                local reel = PlayerGui:FindFirstChild("reel")
+                local shake = PlayerGui:FindFirstChild("shakeui")
+                
+                if reel and reel.Enabled and events:FindFirstChild("reelfinished") then
+                    events.reelfinished:FireServer(100, true)
+                    task.wait(0.1)
+                end
+                
+                if shake and shake.Enabled and events:FindFirstChild("shake") then
+                    for i = 1, 30 do
+                        events.shake:FireServer()
+                        task.wait(0.01)
+                    end
+                    break
+                end
+                
+                maxWait = maxWait + 1
+                task.wait(0.05)
+            end
+            
+            task.wait(0.5)
+            isFishing = false
+        end)
+    end)
+end
+
+-- Auto Fish Loop
+task.spawn(function()
+    while task.wait(1) do
+        if Config.AutoFish and not isFishing then
+            InstantFish()
+        end
+    end
+end)
+
+-- Manual Instant Fish
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.InstantFish and not Config.AutoFish and not isFishing then
+            InstantFish()
+        end
+    end
+end)
+
+-- Opening Animation
+Panel.Size = UDim2.new(0, 0, 0, 0)
+Panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+TweenService:Create(Panel, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+    Size = UDim2.new(0, 420, 0, 720),
+    Position = UDim2.new(0.5, -210, 0.5, -360)
+}):Play()
+
+-- Notification
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "🎣 Fisch Panel Premium",
+    Text = "Script loaded by ikyy beta!",
+    Duration = 5
+})
+
+print("=================================")
+print("🎣 Fisch Panel Premium - Loaded!")
+print("by ikyy beta • v1.0")
+print("=================================") 8)
     PlusCorner.Parent = PlusBtn
     
     MinusBtn.MouseButton1Click:Connect(function()
@@ -596,4 +862,71 @@ local function InstantFish()
                 return 
             end
             
-         
+            if not equipRod(rod) then
+                isFishing = false
+                return
+            end
+            
+            local events = rod:FindFirstChild("events")
+            if events and events:FindFirstChild("cast") then
+                events.cast:FireServer(100, 1)
+                task.wait(Config.FishDelay)
+            end
+            
+            local maxWait = 0
+            while maxWait < 100 do
+                local reel = PlayerGui:FindFirstChild("reel")
+                local shake = PlayerGui:FindFirstChild("shakeui")
+                
+                if reel and reel.Enabled and events:FindFirstChild("reelfinished") then
+                    events.reelfinished:FireServer(100, true)
+                    task.wait(0.1)
+                end
+                
+                if shake and shake.Enabled and events:FindFirstChild("shake") then
+                    for i = 1, 30 do
+                        events.shake:FireServer()
+                        task.wait(0.01)
+                    end
+                    break
+                end
+                
+                maxWait = maxWait + 1
+                task.wait(0.05)
+            end
+            
+            task.wait(0.5)
+            isFishing = false
+        end)
+    end)
+end
+
+-- Auto Fish Loop
+task.spawn(function()
+    while task.wait(1) do
+        if Config.AutoFish and not isFishing then
+            InstantFish()
+        end
+    end
+end)
+
+-- Manual Instant Fish
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.InstantFish and not Config.AutoFish and not isFishing then
+            InstantFish()
+        end
+    end
+end)
+
+-- Notification
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "🎣 Fisch Panel - ikyy",
+    Text = "Panel loaded! Use < > buttons to adjust values",
+    Duration = 5
+})
+
+print("=================================")
+print("Fisch Panel by ikyy - Loaded!")
+print("Use < > buttons to adjust values")
+print("=================================")
